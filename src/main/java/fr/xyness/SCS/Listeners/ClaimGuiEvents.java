@@ -426,7 +426,7 @@ public class ClaimGuiEvents implements Listener {
         		case "Filter":
                 	if(role.equals("visitors")) {
                 		role = "members";
-                	} else if (role.equals("members")) {
+                	} else if (role.equals("members") && player.hasPermission("scs.admin")) {
                 		role = "natural";
                 	} else {
                 		role = "visitors";
