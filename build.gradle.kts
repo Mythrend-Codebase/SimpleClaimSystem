@@ -94,6 +94,6 @@ publishing {
 
 ktor {
     fatJar {
-        archiveFileName.set("fat.jar")
+        archiveFileName.set("CUSTOM_SimpleClaimSystem.jar")
     }
 }
