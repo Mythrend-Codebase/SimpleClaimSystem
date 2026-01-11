@@ -230,7 +230,7 @@ public class ClaimListGui implements InventoryHolder {
 	            }
 	            
 	            // Set the claim item
-	        	ItemStack item = instance.getPlayerMain().getPlayerHead(playerName);
+	        	ItemStack item = instance.getPlayerMain().getPlayerHead(claim.getOwner());
 	        	if(item == null) {
 	        		item = new ItemStack(Material.PLAYER_HEAD);
 	        	}
@@ -272,11 +272,15 @@ public class ClaimListGui implements InventoryHolder {
         String coords = instance.getMain().getClaimCoords(claim);
         String members = getMembers(claim);
         String bans = getBans(claim);
+		String[] coordSplit = coords.split(",");
 
         for (String s : lore) {
             s = s.replace("%owner%", owner)
                  .replace("%description%", ChatColor.translateAlternateColorCodes('&', description))
                  .replace("%name%", name)
+                 .replace("%x%", coordSplit[1])
+                 .replace("%y%", coordSplit[2])
+                 .replace("%z%", coordSplit[3])
                  .replace("%coords%", coords);
 
             if (s.contains("%members%")) {
