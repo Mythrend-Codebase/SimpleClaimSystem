@@ -870,7 +870,7 @@ public class ClaimGuiEvents implements Listener {
             if(cPlayer.getFilter().equals("not_owner")) return;
             if(event.getClick() == ClickType.RIGHT) {
             	if (!instance.getPlayerMain().checkPermPlayer(player, "scs.command.claim")) return;
-                new ClaimMainGui(player,cPlayer.getMapClaim(clickedSlot),instance);
+                new ClaimSettingsGui(player,cPlayer.getMapClaim(clickedSlot),instance,"visitors");
 	        	return;
             }
             if(event.getClick() == ClickType.SHIFT_LEFT) {
