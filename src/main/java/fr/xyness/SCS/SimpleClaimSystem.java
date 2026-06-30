@@ -65,13 +65,7 @@ import net.md_5.bungee.api.ChatColor;
  * This class provides some useful methods
  */
 public class SimpleClaimSystem extends JavaPlugin {
-    
-	
-    // ***************
-    // *  Variables  *
-    // ***************
-    
-	
+
     /** Instance of ClaimDynmap for dynmap integration */
     private ClaimDynmap dynmapInstance;
     
@@ -115,7 +109,7 @@ public class SimpleClaimSystem extends JavaPlugin {
     private SimpleClaimSystem instance;
     
     /** The version of the plugin */
-    private String Version = "1.12.3.4";
+    private String Version = "1.13.1";
     
     /** Data source for database connections */
     private HikariDataSource dataSource;
@@ -137,34 +131,24 @@ public class SimpleClaimSystem extends JavaPlugin {
     
     /** Console sender */
     private ConsoleCommandSender logger = Bukkit.getConsoleSender();
-    
-    
-    // ******************
-    // *  Main Methods  *
-    // ******************
-    
-    
+
     /**
      * Called when the plugin is enabled.
      */
     @Override
     public void onEnable() {
-        
-        // Register plugin instance
+
         this.instance = this;
-        
-        // Load config and send finale message
-        info("==========================================================================");
+
         if (loadConfig(false, Bukkit.getConsoleSender())) {
             info(" ");
-            info("SimpleClaimSystem is enabled !");
-            info("Discord for support : https://discord.gg/6sRTGprM95");
-            info("Documentation : https://xyness.gitbook.io/simpleclaimsystem");
-            info("Developped by Xyness");
+            info(ChatColor.GREEN + "Successfully enabled!" + ChatColor.GRAY + " | By Xyness");
+            info(ChatColor.GRAY + "Wiki: " + ChatColor.WHITE + "https://xyness.gitbook.io/simpleclaimsystem");
+            info(ChatColor.GRAY + "Discord: " + ChatColor.WHITE + "https://discord.gg/6sRTGprM95");
+            info(" ");
         } else {
             Bukkit.getServer().getPluginManager().disablePlugin(this);
         }
-        info("==========================================================================");
     }
     
     /**
@@ -175,47 +159,39 @@ public class SimpleClaimSystem extends JavaPlugin {
         if (dataSource != null) {
             dataSource.close();
         }
-        // Disable players bossbar (prevent for /reload)
+
+
         Bukkit.getOnlinePlayers().forEach(p -> claimBossBarInstance.disableBossBar(p));
-        info("==========================================================================");
-        info("SimpleClaimSystem is disabled !");
-        info("Discord for support : https://discord.gg/6sRTGprM95");
-        info("Documentation : https://xyness.gitbook.io/simpleclaimsystem");
-        info("Developped by Xyness");
-        info(ChatColor.RED + "==========================================================================");
-        info(ChatColor.RED + "[SimpleClaimSystem] " + ChatColor.DARK_RED + "Need the premium version ? Check SimpleClaimSystem V2 :");
-        info(ChatColor.RED + "[SimpleClaimSystem] " + ChatColor.DARK_RED + "https://builtbybit.com/resources/simpleclaimsystem-v2.92437/");
-        info(ChatColor.RED + "==========================================================================");
+        info(" ");
+        info(ChatColor.GOLD + "  " + ChatColor.BOLD + "SimpleClaimSystem V2" + ChatColor.RESET + ChatColor.YELLOW + " - Premium Edition");
+        info(ChatColor.GRAY + "  Unlock advanced features, priority support & more.");
+        info(ChatColor.GRAY + "  " + ChatColor.UNDERLINE + "https://builtbybit.com/resources/simpleclaimsystem-v2.92437/");
+        info(" ");
+        getLogger().info("SimpleClaimSystem disabled.");
     }
-    
+
     /**
      * Called when the plugin is loaded (only for WorldGuard support).
      */
     @Override
     public void onLoad() {
-    	
-        info(ChatColor.RED + "==========================================================================");
-        info(ChatColor.RED + "[SimpleClaimSystem] " + ChatColor.DARK_RED + "Need the premium version ? Check SimpleClaimSystem V2 :");
-        info(ChatColor.RED + "[SimpleClaimSystem] " + ChatColor.DARK_RED + "https://builtbybit.com/resources/simpleclaimsystem-v2.92437/");
-        info(ChatColor.RED + "==========================================================================");
-        
+        info(" ");
+        info(ChatColor.GOLD + "  " + ChatColor.BOLD + "SimpleClaimSystem V2" + ChatColor.RESET + ChatColor.YELLOW + " - Premium Edition");
+        info(ChatColor.GRAY + "  Unlock advanced features, priority support & more.");
+        info(ChatColor.GRAY + "  " + ChatColor.UNDERLINE + "https://builtbybit.com/resources/simpleclaimsystem-v2.92437/");
+        info(" ");
         if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
         	claimWorldguardInstance = new ClaimWorldGuard();
             claimWorldguardInstance.registerCustomFlag();
         }
     }
-    
-    
-    // ********************
-    // *  Other Methods   *
-    // ********************
-    
-    
+
     /**
      * Loads or reloads the plugin configuration.
-     * 
-     * @param reload Whether to reload the configuration
-     * @return True if the configuration was loaded successfully, false otherwise
+     *
+     * @param reload Whether to reload the configuration.
+     * @param sender The command sender to receive status messages.
+     * @return True if the configuration was loaded successfully, false otherwise.
      */
     public boolean loadConfig(boolean reload, CommandSender sender) {
     	
@@ -232,15 +208,18 @@ public class SimpleClaimSystem extends JavaPlugin {
             saveDefaultConfig();
             reloadConfig();
             
-        	// Message for console
-            info(ChatColor.AQUA + "  ___   ___   ___ ");
-            info(ChatColor.AQUA + " / __| / __| / __|  " + ChatColor.DARK_GREEN + "SimpleClaimSystem " + ChatColor.AQUA + "v" + Version);
+        	// Startup banner
+            String title = "  SimpleClaimSystem v" + Version;
+            int boxWidth = 41;
+            String padding = " ".repeat(Math.max(1, boxWidth - title.length()));
+            info(" ");
+            info(ChatColor.DARK_AQUA + "  ┌" + "─".repeat(boxWidth) + "┐");
+            info(ChatColor.DARK_AQUA + "  │" + ChatColor.AQUA + title + ChatColor.DARK_AQUA + padding + "│");
+            info(ChatColor.DARK_AQUA + "  │" + ChatColor.GRAY + "  Server: " + ChatColor.WHITE + Bukkit.getVersion() + ChatColor.DARK_AQUA);
             if(getConfig().getBoolean("check-for-updates")) {
-            	info(ChatColor.AQUA + " \\__ \\ ∣(__  \\__ \\  " + ChatColor.GRAY + checkForUpdates());
-            } else {
-            	info(ChatColor.AQUA + " \\__ \\ ∣(__  \\__ \\  " + ChatColor.GRAY + "Updates checker is disabled");
-            } 
-            info(ChatColor.AQUA + " |___/ \\___| |___/  " + ChatColor.DARK_GRAY + "Running on " + Bukkit.getVersion());
+            	info(ChatColor.DARK_AQUA + "  │" + ChatColor.GRAY + "  " + checkForUpdates());
+            }
+            info(ChatColor.DARK_AQUA + "  └" + "─".repeat(boxWidth) + "┘");
             info(" ");
             
             // Unregister all handlers
@@ -594,12 +573,19 @@ public class SimpleClaimSystem extends JavaPlugin {
             // Add Dynmap settings
             configC = getConfig().getString("dynmap");
             if(configC.equalsIgnoreCase("true") && claimSettingsInstance.getBooleanSetting("dynmap")) {
-                if (!reload) {
+                if (reload && dynmapInstance != null) {
+                    dynmapInstance.clearMarkers();
+                } else if (!reload) {
                     DynmapAPI dynmapAPI = (DynmapAPI) dynmap;
                     MarkerAPI markerAPI = dynmapAPI.getMarkerAPI();
                     if (markerAPI != null) {
-                        MarkerSet markerSet = markerAPI.createMarkerSet("SimpleClaimSystem", "Claims", null, false);
+                        MarkerSet markerSet = markerAPI.getMarkerSet("SimpleClaimSystem");
+                        if (markerSet == null) {
+                            markerSet = markerAPI.createMarkerSet("SimpleClaimSystem", "Claims", null, false);
+                        }
                         dynmapInstance = new ClaimDynmap(markerSet, this);
+                    } else {
+                        claimSettingsInstance.addSetting("dynmap", "false");
                     }
                 }
             } else {
@@ -607,12 +593,16 @@ public class SimpleClaimSystem extends JavaPlugin {
             }
             claimSettingsInstance.addSetting("dynmap-claim-border-color", getConfig().getString("dynmap-settings.claim-border-color"));
             claimSettingsInstance.addSetting("dynmap-claim-fill-color", getConfig().getString("dynmap-settings.claim-fill-color"));
+            claimSettingsInstance.addSetting("dynmap-claim-opacity", String.valueOf(getConfig().getDouble("dynmap-settings.claim-opacity")));
             claimSettingsInstance.addSetting("dynmap-claim-hover-text", getConfig().getString("dynmap-settings.claim-hover-text"));
-            
+
             // Add Bluemap settings
             configC = getConfig().getString("bluemap");
             if(configC.equalsIgnoreCase("true") && claimSettingsInstance.getBooleanSetting("bluemap")) {
-            	if(!reload) {
+                if (reload && bluemapInstance != null) {
+                    bluemapInstance.clearMarkers();
+                    bluemapInstance.initMarkerSets();
+                } else if (!reload) {
                     Optional<BlueMapAPI> apiO = BlueMapAPI.getInstance();
                     if(apiO.isPresent()) {
                     	bluemapInstance = new ClaimBluemap(apiO.get(),this);
@@ -622,28 +612,39 @@ public class SimpleClaimSystem extends JavaPlugin {
                     		if(apiCheck.isPresent()) {
                     			claimSettingsInstance.addSetting("bluemap", "true");
                     			bluemapInstance = new ClaimBluemap(apiCheck.get(),this);
+                    			bluemapInstance.load();
                     		}
                     	});
                     	claimSettingsInstance.addSetting("bluemap", "false");
                     }
-            	}
+                }
             } else {
             	claimSettingsInstance.addSetting("bluemap", "false");
             }
             claimSettingsInstance.addSetting("bluemap-claim-border-color", getConfig().getString("bluemap-settings.claim-border-color"));
             claimSettingsInstance.addSetting("bluemap-claim-fill-color", getConfig().getString("bluemap-settings.claim-fill-color"));
+            claimSettingsInstance.addSetting("bluemap-claim-opacity", getConfig().getString("bluemap-settings.claim-opacity"));
             claimSettingsInstance.addSetting("bluemap-claim-hover-text", getConfig().getString("bluemap-settings.claim-hover-text"));
-            
+
             // Add Pl3xmap settings
             configC = getConfig().getString("pl3xmap");
             if(configC.equalsIgnoreCase("true") && claimSettingsInstance.getBooleanSetting("pl3xmap")) {
-            	if (!reload) pl3xmapInstance = new ClaimPl3xMap(this);
+                if (reload && pl3xmapInstance != null) {
+                    pl3xmapInstance.clearMarkers();
+                } else if (!reload) {
+                    try {
+                        pl3xmapInstance = new ClaimPl3xMap(this);
+                    } catch (Throwable t) {
+                        claimSettingsInstance.addSetting("pl3xmap", "false");
+                    }
+                }
             } else {
             	claimSettingsInstance.addSetting("pl3xmap", "false");
             }
             claimSettingsInstance.addSetting("pl3xmap-claim-border-color", getConfig().getString("pl3xmap-settings.claim-border-color"));
             claimSettingsInstance.addSetting("pl3xmap-claim-fill-color", getConfig().getString("pl3xmap-settings.claim-fill-color"));
             claimSettingsInstance.addSetting("pl3xmap-claim-hover-text", getConfig().getString("pl3xmap-settings.claim-hover-text"));
+            claimSettingsInstance.addSetting("pl3xmap-claim-opacity", getConfig().getString("pl3xmap-settings.claim-opacity", "128"));
             
             // Add the message type for protection
             configC = getConfig().getString("protection-message");
@@ -912,7 +913,12 @@ public class SimpleClaimSystem extends JavaPlugin {
             
             // Register protection listener
             getServer().getPluginManager().registerEvents(new ClaimEvents(this), this);
-            
+
+            // Register copper golem protection
+            if (new CopperGolemEvents(this).register()) {
+                info("Copper golem protection enabled.");
+            }
+
             // Register commands
             getCommand("claim").setExecutor(new ClaimCommand(this));
             getCommand("unclaim").setExecutor(new UnclaimCommand(this));
@@ -929,7 +935,12 @@ public class SimpleClaimSystem extends JavaPlugin {
 
             // Load claims system
             claimInstance.loadClaims();
-            
+
+            // Load BlueMap markers
+            if (bluemapInstance != null && claimSettingsInstance.getBooleanSetting("bluemap")) {
+                bluemapInstance.load();
+            }
+
             // Load players
             cPlayerMainInstance.loadPlayers();
             
@@ -1121,7 +1132,7 @@ public class SimpleClaimSystem extends JavaPlugin {
                     		    "permissions VARCHAR(510) NOT NULL, " +
                     		    "for_sale TINYINT(1) NOT NULL DEFAULT 0, " +
                     		    "sale_price DOUBLE NOT NULL DEFAULT 0, " +
-                    		    "bans TEXT NOT NULL DEFAULT '')";
+                    		    "bans TEXT NOT NULL)";
                         stmt.executeUpdate(sql);
                     	sql = "CREATE TABLE IF NOT EXISTS scs_players " +
                     		    "(id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -1175,7 +1186,7 @@ public class SimpleClaimSystem extends JavaPlugin {
                     		    "permissions VARCHAR(510) NOT NULL, " +
                     		    "for_sale TINYINT(1) NOT NULL DEFAULT 0, " +
                     		    "sale_price DOUBLE NOT NULL DEFAULT 0, " +
-                    		    "bans TEXT NOT NULL DEFAULT '')";
+                    		    "bans TEXT NOT NULL)";
                         stmt.executeUpdate(sql);
                     	sql = "CREATE TABLE IF NOT EXISTS scs_players " +
                     		    "(id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -1269,17 +1280,20 @@ public class SimpleClaimSystem extends JavaPlugin {
             // Add Dynmap settings
             claimSettingsInstance.addSetting("dynmap-claim-border-color", getConfig().getString("dynmap-settings.claim-border-color"));
             claimSettingsInstance.addSetting("dynmap-claim-fill-color", getConfig().getString("dynmap-settings.claim-fill-color"));
+            claimSettingsInstance.addSetting("dynmap-claim-opacity", String.valueOf(getConfig().getDouble("dynmap-settings.claim-opacity")));
             claimSettingsInstance.addSetting("dynmap-claim-hover-text", getConfig().getString("dynmap-settings.claim-hover-text"));
-            
+
             // Add Bluemap settings
             claimSettingsInstance.addSetting("bluemap-claim-border-color", getConfig().getString("bluemap-settings.claim-border-color"));
             claimSettingsInstance.addSetting("bluemap-claim-fill-color", getConfig().getString("bluemap-settings.claim-fill-color"));
+            claimSettingsInstance.addSetting("bluemap-claim-opacity", getConfig().getString("bluemap-settings.claim-opacity"));
             claimSettingsInstance.addSetting("bluemap-claim-hover-text", getConfig().getString("bluemap-settings.claim-hover-text"));
             
             // Add Pl3xmap settings
             claimSettingsInstance.addSetting("pl3xmap-claim-border-color", getConfig().getString("pl3xmap-settings.claim-border-color"));
             claimSettingsInstance.addSetting("pl3xmap-claim-fill-color", getConfig().getString("pl3xmap-settings.claim-fill-color"));
             claimSettingsInstance.addSetting("pl3xmap-claim-hover-text", getConfig().getString("pl3xmap-settings.claim-hover-text"));
+            claimSettingsInstance.addSetting("pl3xmap-claim-opacity", getConfig().getString("pl3xmap-settings.claim-opacity", "128"));
             
             // Add the message type for protection
             configC = getConfig().getString("protection-message");
@@ -1589,55 +1603,20 @@ public class SimpleClaimSystem extends JavaPlugin {
         return status[0];
     }
     
-    /**
-     * Returns the data source for database connections.
-     * 
-     * @return The data source
-     */
     public HikariDataSource getDataSource() { return dataSource; }
-    
-    /**
-     * Send a log
-     * 
-     * @param msg The log to send
-     */
+
     public void info(String msg) {
     	logger.sendMessage(msg);
     }
-    
-    /**
-     * Checks if the server is using Folia.
-     * 
-     * @return True if the server is using Folia, false otherwise
-     */
+
     public boolean isFolia() { return isFolia; }
-    
-    /**
-     * Checks if the server is using Paper.
-     * 
-     * @return True if the server is using Paper, false otherwise
-     */
+
     public boolean isPaper() { return isPaper; }
-    
-    /**
-     * Gets the Minecraft version.
-     * 
-     * @return The Minecraft version.
-     */
+
     public String getMinecraftVersion() { return minecraftVersion; }
-    
-    /**
-     * Returns the update message.
-     * 
-     * @return The update message
-     */
+
     public String getUpdateMessage() { return updateMessage; }
-    
-    /**
-     * Checks if an update is available for the 
-     * 
-     * @return True if an update is available, false otherwise
-     */
+
     public boolean isUpdateAvailable() { return isUpdateAvailable; }
     
     /**
@@ -1851,6 +1830,7 @@ public class SimpleClaimSystem extends JavaPlugin {
 
             if (needSave) customConfig.save(langFile);
         } catch (Exception e) {
+            getLogger().severe("Failed to update language file with missing keys: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -1899,6 +1879,7 @@ public class SimpleClaimSystem extends JavaPlugin {
                 config.save(configFile);
                 reloadConfig();
             } catch (java.io.IOException e) {
+                getLogger().severe("Failed to save updated config.yml: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -1958,12 +1939,13 @@ public class SimpleClaimSystem extends JavaPlugin {
      * @return The update message.
      */
     public String checkForUpdates() {
+        HttpURLConnection connection = null;
         try {
         	URI uri = URI.create("https://raw.githubusercontent.com/Xyness/SimpleClaimSystem/main/version.yml");
             URL url = uri.toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            
+
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                 String response = reader.readLine();
                 if (!Version.equalsIgnoreCase(response)) {
@@ -1977,6 +1959,8 @@ public class SimpleClaimSystem extends JavaPlugin {
             }
         } catch (Exception e) {
             return "Error when checking new update";
+        } finally {
+            if (connection != null) connection.disconnect();
         }
     }
     
@@ -1987,14 +1971,15 @@ public class SimpleClaimSystem extends JavaPlugin {
      */
     public CompletableFuture<String> checkForUpdatesAsync() {
         return CompletableFuture.supplyAsync(() -> {
+            HttpURLConnection connection = null;
             try {
                 URI uri = URI.create("https://raw.githubusercontent.com/Xyness/SimpleClaimSystem/main/version.yml");
                 URL url = uri.toURL();
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
-                connection.setConnectTimeout(5000); // Timeout de 5s
+                connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
-                
+
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                     String response = reader.readLine();
                     if (!Version.equalsIgnoreCase(response)) {
@@ -2008,6 +1993,8 @@ public class SimpleClaimSystem extends JavaPlugin {
                 }
             } catch (Exception e) {
                 return "Error when checking new update";
+            } finally {
+                if (connection != null) connection.disconnect();
             }
         });
     }
@@ -2026,119 +2013,54 @@ public class SimpleClaimSystem extends JavaPlugin {
         }
     }
     
-    /**
-     * Returns the SimpleClaimSystem instance.
-     * 
-     * @return The SimpleClaimSystem instance
-     */
     public SimpleClaimSystem getInstance() {
         return instance;
     }
-    
-    /**
-     * Returns the ClaimMain instance.
-     * 
-     * @return The ClaimMain instance
-     */
+
     public ClaimMain getMain() {
         return claimInstance;
     }
-    
-    /**
-     * Returns the ClaimGuis instance.
-     * 
-     * @return The ClaimGuis instance
-     */
+
     public ClaimGuis getGuis() {
         return claimGuisInstance;
     }
-    
-    /**
-     * Returns the ClaimSettings instance.
-     * 
-     * @return The ClaimSettings instance
-     */
+
     public ClaimSettings getSettings() {
         return claimSettingsInstance;
     }
-    
-    /**
-     * Returns the ClaimLanguage instance.
-     * 
-     * @return The ClaimLanguage instance
-     */
+
     public ClaimLanguage getLanguage() {
         return claimLanguageInstance;
     }
-    
-    /**
-     * Returns the ClaimWorldGuard instance.
-     * 
-     * @return The ClaimWorldGuard instance
-     */
+
     public ClaimWorldGuard getWorldGuard() {
         return claimWorldguardInstance;
     }
-    
-    /**
-     * Returns the ClaimVault instance.
-     * 
-     * @return The ClaimVault instance
-     */
+
     public ClaimVault getVault() {
         return claimVaultInstance;
     }
-    
-    /**
-     * Returns the CPlayerMain instance.
-     * 
-     * @return The CPlayerMain instance
-     */
+
     public CPlayerMain getPlayerMain() {
         return cPlayerMainInstance;
     }
-    
-    /**
-     * Returns the ClaimBossBar instance.
-     * 
-     * @return The ClaimBossBar instance
-     */
+
     public ClaimBossBar getBossBars() {
         return claimBossBarInstance;
     }
-    
-    /**
-     * Returns the ClaimDynmap instance.
-     * 
-     * @return The ClaimDynmap instance
-     */
+
     public ClaimDynmap getDynmap() {
         return dynmapInstance;
     }
-    
-    /**
-     * Returns the ClaimBluemap instance.
-     * 
-     * @return The ClaimBluemap instance
-     */
+
     public ClaimBluemap getBluemap() {
         return bluemapInstance;
     }
-    
-    /**
-     * Returns the ClaimPl3xMap instance.
-     * 
-     * @return The ClaimPl3xMap instance
-     */
+
     public ClaimPl3xMap getPl3xMap() {
         return pl3xmapInstance;
     }
-    
-    /**
-     * Returns the ClaimPurge instance.
-     * 
-     * @return The ClaimPurge instance
-     */
+
     public ClaimPurge getAutopurge() {
         return claimPurgeInstance;
     }

@@ -25,11 +25,18 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.GlowItemFrame;
 import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.Ghast;
+import org.bukkit.entity.Hoglin;
+import org.bukkit.entity.MagmaCube;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Phantom;
+import org.bukkit.entity.PigZombie;
+import org.bukkit.entity.Shulker;
+import org.bukkit.entity.Slime;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.ThrownPotion;
+import org.bukkit.entity.WitherSkull;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -53,6 +60,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPlaceEvent;
 import org.bukkit.event.entity.EntityToggleGlideEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -71,6 +79,7 @@ import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
@@ -86,13 +95,7 @@ import fr.xyness.SCS.Types.WorldMode;
  * Event listener for claim-related events.
  */
 public class ClaimEvents implements Listener {
-	
-	
-    // ***************
-    // *  Variables  *
-    // ***************
-	
-	
+
     /** Instance of SimpleClaimSystem */
     private SimpleClaimSystem instance;
     
@@ -101,13 +104,7 @@ public class ClaimEvents implements Listener {
     
     /** Bukkit version */
     private final String bukkitVersion = Bukkit.getVersion();
-    
-    
-    // ******************
-    // *  Constructors  *
-    // ******************
-    
-    
+
     /**
      * Constructor for ClaimEvents.
      *
@@ -131,13 +128,7 @@ public class ClaimEvents implements Listener {
     		NEGATIVE_EFFECTS.add(PotionEffectType.DARKNESS);
     	}
     }
-	
-    
-	// *******************
-	// *  EventHandlers  *
-	// *******************
-	
-	
+
     /**
      * Handles player command pre process.
      * 
@@ -262,9 +253,9 @@ public class ClaimEvents implements Listener {
 	 */
 	@EventHandler
 	public void onPlayerDamage(EntityDamageEvent event) {
-		if(!(event.getEntity() instanceof Player)) return;
+		if(!(event.getEntity() instanceof Player player)) return;
+		if(!player.isOnline() || player.hasMetadata("NPC")) return;
 		if(!instance.getSettings().getBooleanSetting("claim-fly-disabled-on-damage")) return;
-		Player player = (Player) event.getEntity();
 		CPlayer cPlayer = instance.getPlayerMain().getCPlayer(player.getUniqueId());
     	if(cPlayer != null && cPlayer.getClaimFly()) {
     		instance.getPlayerMain().removePlayerFly(player);
@@ -334,16 +325,14 @@ public class ClaimEvents implements Listener {
 		Chunk chunk = event.getLocation().getChunk();
 		if(instance.getMain().checkIfClaimExists(chunk)) {
 			Claim claim = instance.getMain().getClaim(chunk);
-			Entity entity = event.getEntity();
-			if(entity instanceof Monster || entity instanceof Phantom) {
+			if(isHostileMob(event.getEntity())) {
 				if(!claim.getPermission("Monsters", "Natural")) {
 					event.setCancelled(true);
 					return;
 				}
 			}
 		} else if (mode == WorldMode.SURVIVAL_REQUIRING_CLAIMS && !instance.getSettings().getSettingSRC("Monsters")) {
-			Entity entity = event.getEntity();
-			if(entity instanceof Monster || entity instanceof Phantom) {
+			if(isHostileMob(event.getEntity())) {
 				event.setCancelled(true);
 			}
         }
@@ -438,6 +427,42 @@ public class ClaimEvents implements Listener {
         }
     }
     
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onWitherSkullHit(ProjectileHitEvent event) {
+        if (event.getEntityType() != EntityType.WITHER_SKULL) return;
+        
+        WorldMode mode = instance.getSettings().getWorldMode(event.getEntity().getWorld().getName());
+        boolean shouldCancel = false;
+
+        if (event.getHitBlock() != null) {
+            Chunk chunk = event.getHitBlock().getChunk();
+            if (instance.getMain().checkIfClaimExists(chunk) && !instance.getMain().canPermCheck(chunk, "Explosions", "Natural")) {
+                shouldCancel = true;
+            } else if (mode == WorldMode.SURVIVAL_REQUIRING_CLAIMS && !instance.getSettings().getSettingSRC("Explosions")) {
+                shouldCancel = true;
+            }
+        }
+
+        if (event.getHitEntity() != null) {
+            Chunk chunk = event.getHitEntity().getLocation().getChunk();
+            if (instance.getMain().checkIfClaimExists(chunk) && !instance.getMain().canPermCheck(chunk, "Explosions", "Natural")) {
+                shouldCancel = true;
+            } else if (mode == WorldMode.SURVIVAL_REQUIRING_CLAIMS && !instance.getSettings().getSettingSRC("Explosions")) {
+                shouldCancel = true;
+            }
+        }
+
+        if (shouldCancel) {
+            WitherSkull skull = (WitherSkull) event.getEntity();
+            skull.setCharged(false);
+            skull.setYield(0f);
+            skull.setIsIncendiary(false);
+            instance.executeSync(() -> {
+                skull.remove();
+            });
+        }
+    }
+    
     /**
      * Handles projectile hit events to prevent explosions in claims.
      * @param event the projectile hit event.
@@ -445,37 +470,7 @@ public class ClaimEvents implements Listener {
     @EventHandler
     public void onProjectileHit(ProjectileHitEvent event) {
     	WorldMode mode = instance.getSettings().getWorldMode(event.getEntity().getWorld().getName());
-		if (event.getEntityType() == EntityType.WITHER_SKULL) {
-            if (event.getHitBlock() != null) {
-            	Block block = event.getHitBlock();
-            	Chunk chunk = block.getLocation().getChunk();
-                if (instance.getMain().checkIfClaimExists(chunk) && !instance.getMain().canPermCheck(chunk, "Explosions", "Natural")) {
-                	event.getEntity().remove();
-                	event.setCancelled(true);
-                } else if (mode == WorldMode.SURVIVAL_REQUIRING_CLAIMS && !instance.getSettings().getSettingSRC("Explosions")) {
-                	event.getEntity().remove();
-                	event.setCancelled(true);
-                }
-            }
-            if (event.getHitEntity() != null) {
-        		Chunk chunk = event.getHitEntity().getLocation().getChunk();
-        		if(instance.getMain().checkIfClaimExists(chunk) && !instance.getMain().canPermCheck(chunk, "Explosions", "Natural")) {
-        			event.getEntity().remove();
-        			event.setCancelled(true);
-        		} else if (mode == WorldMode.SURVIVAL_REQUIRING_CLAIMS && !instance.getSettings().getSettingSRC("Explosions")) {
-        			event.getEntity().remove();
-                	event.setCancelled(true);
-                }
-            }
-            event.getEntity().getNearbyEntities(5, 5, 5).forEach(entity -> {
-            	Chunk chunk = entity.getLocation().getChunk();
-            	if (instance.getMain().checkIfClaimExists(chunk) && !instance.getMain().canPermCheck(chunk, "Explosions", "Natural")) {
-                    entity.setVelocity(new Vector(0, 0, 0));
-                } else if (mode == WorldMode.SURVIVAL_REQUIRING_CLAIMS && !instance.getSettings().getSettingSRC("Explosions")) {
-                	entity.setVelocity(new Vector(0, 0, 0));
-                }
-            });
-        } else if (instance.getMinecraftVersion().contains("1.21") && event.getEntityType() == EntityType.WIND_CHARGE) {
+		if (instance.getMinecraftVersion().contains("1.21") && event.getEntityType() == EntityType.WIND_CHARGE) {
             if (event.getHitBlock() != null) {
             	Block block = event.getHitBlock();
             	Chunk chunk = block.getLocation().getChunk();
@@ -1596,19 +1591,31 @@ public class ClaimEvents implements Listener {
             }
         }
     }
-    
-    
-    // *******************
-    // *  Other methods  *
-    // *******************
-    
-    
+
     /**
      * Checks if the block needs to be blocked.
      * 
      * @param block The block.
      * @return True if need block, false otherwise.
      */
+    /**
+     * Checks if an entity is a hostile mob.
+     * Includes all hostile mobs that don't implement the Monster interface
+     * (Ghast, MagmaCube, Slime, Hoglin, Zombified Piglin, Phantom, Shulker).
+     *
+     * @param entity The entity to check.
+     * @return true if the entity is a hostile mob.
+     */
+    private boolean isHostileMob(Entity entity) {
+        return entity instanceof Monster
+            || entity instanceof Phantom
+            || entity instanceof Ghast
+            || entity instanceof Slime
+            || entity instanceof Hoglin
+            || entity instanceof Shulker
+            || entity instanceof PigZombie;
+    }
+
     private boolean hasCrossChunkRedstoneSourceAndNeedBlock(Block block) {
         Chunk currentChunk = block.getChunk();
 
@@ -1760,6 +1767,7 @@ public class ClaimEvents implements Listener {
 	        		}
 	        	})
 	            .exceptionally(ex -> {
+	                instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
 	                ex.printStackTrace();
 	                return null;
 	            });
@@ -1848,6 +1856,7 @@ public class ClaimEvents implements Listener {
                         		}
                         	})
                             .exceptionally(ex -> {
+                                instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                                 ex.printStackTrace();
                                 return null;
                             });
@@ -1857,6 +1866,7 @@ public class ClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
@@ -1895,6 +1905,7 @@ public class ClaimEvents implements Listener {
             			}
             		})
                     .exceptionally(ex -> {
+                        instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                         ex.printStackTrace();
                         return null;
                     });
@@ -1915,6 +1926,7 @@ public class ClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
@@ -1942,7 +1954,7 @@ public class ClaimEvents implements Listener {
             }
             
             // Check if there is chunk near
-            if(!instance.getMain().isAreaClaimFree(chunk, cPlayer.getClaimDistance(), playerName).join()) {
+            if(!instance.getMain().isAreaClaimFreeSync(chunk, cPlayer.getClaimDistance(), playerName)) {
             	player.sendMessage(instance.getLanguage().getMessage("cannot-claim-because-claim-near"));
             	return;
             }
@@ -1979,6 +1991,7 @@ public class ClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });

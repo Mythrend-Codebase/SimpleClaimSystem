@@ -31,10 +31,7 @@ import fr.xyness.SCS.Types.GuiSlot;
  */
 public class ClaimListGui implements InventoryHolder {
 
-	
-    // ***************
-    // *  Variables  *
-    // ***************
+
 
 	
     /** Inventory for the GUI. */
@@ -46,10 +43,7 @@ public class ClaimListGui implements InventoryHolder {
     /** Instance of SimpleClaimSystem */
     private final SimpleClaimSystem instance;
     
-    
-    // ******************
-    // *  Constructors  *
-    // ******************
+
 
     
     /**
@@ -81,15 +75,13 @@ public class ClaimListGui implements InventoryHolder {
         	}
         })
         .exceptionally(ex -> {
+            instance.getLogger().severe("Async GUI operation failed: " + ex.getMessage());
             ex.printStackTrace();
             return null;
         });
     }
 
-    
-    // ********************
-    // *  Others Methods  *
-    // ********************
+
 
     
     /**
@@ -233,17 +225,11 @@ public class ClaimListGui implements InventoryHolder {
 	        	if(item == null) {
 	        		item = new ItemStack(Material.PLAYER_HEAD);
 	        	}
-	        	if(item.hasItemMeta() && item.getItemMeta() != null) {
-	        		if(item.getItemMeta() instanceof SkullMeta meta) {
-	    	            meta.setDisplayName(instance.getLanguage().getMessage("access-claim-title").replace("%name%", claim.getName()).replace("%coords%", instance.getMain().getClaimCoords(claim)));
-	    	            meta.setLore(used_lore);
-	    	            item.setItemMeta(meta);
-	        		} else {
-	        			ItemMeta meta = item.getItemMeta();
-	    	            meta.setDisplayName(instance.getLanguage().getMessage("access-claim-title").replace("%name%", claim.getName()).replace("%coords%", instance.getMain().getClaimCoords(claim)));
-	    	            meta.setLore(used_lore);
-	    	            item.setItemMeta(meta);
-	        		}
+	        	SkullMeta meta = (SkullMeta) item.getItemMeta();
+	        	if(meta != null) {
+	        		meta.setDisplayName(instance.getLanguage().getMessage("access-claim-title").replace("%name%", claim.getName()).replace("%coords%", instance.getMain().getClaimCoords(claim)));
+	        		meta.setLore(used_lore);
+	        		item.setItemMeta(meta);
 	        	}
 	            inv.setItem(i, item);
 	            i++;

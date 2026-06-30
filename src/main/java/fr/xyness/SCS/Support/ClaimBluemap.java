@@ -1,7 +1,7 @@
 package fr.xyness.SCS.Support;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
@@ -24,28 +24,11 @@ import fr.xyness.SCS.Types.Claim;
  * This class integrates claims with the BlueMap plugin, allowing claims to be displayed as markers on the BlueMap.
  */
 public class ClaimBluemap {
-	
-	
-	// ***************
-	// *  Variables  *
-	// ***************
-	
-	
-	/** The BlueMap API instance. */
-	private BlueMapAPI api;
-	
-	/** A map storing the MarkerSets for each world. */
-	private Map<World, MarkerSet> markerSets = new HashMap<>();
-	
-    /** Instance of SimpleClaimSystem */
-    private SimpleClaimSystem instance;
-	
-    
-	// ******************
-	// *  Constructors  *
-	// ******************
 
-    
+	private BlueMapAPI api;
+	private Map<World, MarkerSet> markerSets = new ConcurrentHashMap<>();
+    private SimpleClaimSystem instance;
+
 	/**
 	 * Main constructor for the ClaimBluemap class.
 	 * Initializes the markers on the BlueMap for all claims in all worlds.
@@ -56,17 +39,47 @@ public class ClaimBluemap {
 	public ClaimBluemap(BlueMapAPI api, SimpleClaimSystem instance) {
 		this.api = api;
 		this.instance = instance;
+		initMarkerSets();
+	}
+
+	/**
+	 * Initializes empty MarkerSets for each world and registers them with BlueMap.
+	 * Claims are added later during loadClaims().
+	 */
+	public void initMarkerSets() {
+		for (World w : Bukkit.getWorlds()) {
+			MarkerSet markerSet = MarkerSet.builder()
+	                .label("Claims")
+	                .build();
+			markerSets.put(w, markerSet);
+			api.getWorld(w).ifPresent(world -> {
+			    for (BlueMapMap map : world.getMaps()) {
+			        map.getMarkerSets().put("Claims", markerSet);
+			    }
+			});
+		}
+	}
+
+	/**
+	 * Clears all claim markers from the BlueMap.
+	 * Used during plugin reload to reset map state.
+	 */
+	public void clearMarkers() {
+		markerSets.values().forEach(markerSet -> markerSet.getMarkers().clear());
+		markerSets.clear();
+	}
+
+	/**
+	 * Reloads all claims onto the BlueMap.
+	 * Clears existing markers and re-creates them.
+	 */
+	public void reload() {
+		clearMarkers();
 		load();
 	}
-	
-	
-	// ********************
-	// *  Others Methods  *
-	// ********************
-	
-	
+
 	/**
-	 * Loads the claims into Bluemap
+	 * Loads the claims into Bluemap.
 	 */
 	public void load() {
 		Set<Claim> claims = instance.getMain().getAllClaims();
@@ -97,15 +110,15 @@ public class ClaimBluemap {
 	 * @param claim The claim to create the marker for.
 	 */
 	public void createClaimZone(Claim claim) {
-	    // Get data
 	    String name = claim.getName();
 	    String owner = claim.getOwner();
 	    Set<Chunk> chunks = claim.getChunks();
 	    String hoverText = instance.getSettings().getSetting("bluemap-claim-hover-text")
 	            .replace("%claim-name%", name)
 	            .replace("%owner%", owner);
-	    String fcolor = "80" + instance.getSettings().getSetting("bluemap-claim-fill-color");
-	    String lcolor = "80" + instance.getSettings().getSetting("bluemap-claim-border-color");
+	    String alphaHex = instance.getSettings().getSetting("bluemap-claim-opacity");
+	    String fcolor = alphaHex + instance.getSettings().getSetting("bluemap-claim-fill-color");
+	    String lcolor = alphaHex + instance.getSettings().getSetting("bluemap-claim-border-color");
 	    Color fillColor = new Color((int) Long.parseLong(fcolor, 16));
 	    Color strokeColor = new Color((int) Long.parseLong(lcolor, 16));
 
@@ -168,7 +181,7 @@ public class ClaimBluemap {
 	 * @param chunks The chunks to delete the marker for.
 	 */
 	public void deleteMarker(Set<Chunk> chunks) {
-		chunks.parallelStream().forEach(chunk -> {
+		chunks.forEach(chunk -> {
 			String markerId = "chunk_" + chunk.getX() + "_" + chunk.getZ();
 			MarkerSet markerSet = markerSets.get(chunk.getWorld());
 			if (markerSet == null) return;

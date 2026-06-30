@@ -26,21 +26,9 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public class PaperClaimEvents implements Listener {
-
-	
-    // ***************
-    // *  Variables  *
-    // ***************
-	
 	
     /** Instance of SimpleClaimSystem */
     private SimpleClaimSystem instance;
-    
-    
-    // ******************
-    // *  Constructors  *
-    // ******************
-    
     
     /**
      * Constructor for ClaimEventsEnterLeave.
@@ -50,12 +38,6 @@ public class PaperClaimEvents implements Listener {
     public PaperClaimEvents(SimpleClaimSystem instance) {
     	this.instance = instance;
     }
-    
-    
-    // *******************
-    // *  EventHandlers  *
-    // *******************
-    
     
 	/**
 	 * Handles player chat events for claim chat.
@@ -151,36 +133,41 @@ public class PaperClaimEvents implements Listener {
         Chunk to = event.getTo().getChunk();
         Chunk from = event.getFrom().getChunk();
         Player player = event.getPlayer();
+        if(!player.isOnline() || player.hasMetadata("NPC")) return;
+        UUID playerId = player.getUniqueId();
+        CPlayer cPlayer = instance.getPlayerMain().getCPlayer(playerId);
+
         if (!instance.getMain().checkIfClaimExists(to)) {
         	instance.getBossBars().disableBossBar(player);
+        	if (cPlayer != null) {
+        		instance.getPlayerMain().removePlayerFly(player);
+        	}
         	return;
         }
 
-        UUID playerId = player.getUniqueId();
-        CPlayer cPlayer = instance.getPlayerMain().getCPlayer(playerId);
         if(cPlayer == null) return;
-        
+
         String ownerTO = instance.getMain().getOwnerInClaim(to);
         String ownerFROM = instance.getMain().getOwnerInClaim(from);
-        
+
         Claim claim = instance.getMain().getClaim(to);
         if(claim != null) {
 	        if (instance.getMain().checkBan(claim, player) && !instance.getPlayerMain().checkPermPlayer(player, "scs.bypass.ban")) {
 	            cancelTeleport(event, player, "player-banned");
 	            return;
 	        }
-	        
+
 	        if (!claim.getPermissionForPlayer("Enter",player) && !instance.getPlayerMain().checkPermPlayer(player, "scs.bypass.enter")) {
 	            cancelTeleport(event, player, "enter");
 	            return;
 	        }
-	
+
 	        if (isTeleportBlocked(event, player, claim)) {
 	            cancelTeleport(event, player, "teleportations");
 	            return;
 	        }
         }
-        
+
         instance.getBossBars().activeBossBar(player, to);
         handleAutoFly(player, cPlayer, to, ownerTO);
         handleWeatherSettings(player, to, from);
@@ -206,9 +193,6 @@ public class PaperClaimEvents implements Listener {
     }
     
     
-    // *******************
-    // *  Other methods  *
-    // *******************
     
     
     /**
@@ -255,11 +239,11 @@ public class PaperClaimEvents implements Listener {
      * @param chunk  The chunk.
      */
     private void handleWeatherSettings(Player player, Chunk to, Chunk from) {
-    	Claim claimTo = instance.getMain().getClaim(to);
-    	Claim claimFrom = instance.getMain().getClaim(from);
-        if (instance.getMain().checkIfClaimExists(to) && !claimTo.getPermissionForPlayer("Weather",player)) {
+    	Claim claimTo = to == null ? null : instance.getMain().getClaim(to);
+    	Claim claimFrom = from == null ? null : instance.getMain().getClaim(from);
+        if (claimTo != null && !claimTo.getPermissionForPlayer("Weather",player)) {
             player.setPlayerWeather(WeatherType.CLEAR);
-        } else if (instance.getMain().checkIfClaimExists(from) && !claimFrom.getPermissionForPlayer("Weather",player)) {
+        } else if (claimFrom != null && !claimFrom.getPermissionForPlayer("Weather",player)) {
             player.resetPlayerWeather();
         }
     }
@@ -326,6 +310,7 @@ public class PaperClaimEvents implements Listener {
 	        		}
 	        	})
 	            .exceptionally(ex -> {
+	                instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
 	                ex.printStackTrace();
 	                return null;
 	            });
@@ -346,11 +331,11 @@ public class PaperClaimEvents implements Listener {
             cPlayer.setClaimAuto("");
         } else {
         	
-            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaim(player)) {
+            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaimInChunk(chunk)) {
                 player.sendMessage(instance.getLanguage().getMessage("worldguard-cannot-claim-in-region"));
                 return;
             }
-        	
+
         	String playerName = player.getName();
         	Claim claim = cPlayer.getTargetClaimChunk();
         	if(claim == null) return;
@@ -420,6 +405,7 @@ public class PaperClaimEvents implements Listener {
                         		}
                         	})
                             .exceptionally(ex -> {
+                                instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                                 ex.printStackTrace();
                                 return null;
                             });
@@ -429,6 +415,7 @@ public class PaperClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
@@ -467,6 +454,7 @@ public class PaperClaimEvents implements Listener {
             			}
             		})
                     .exceptionally(ex -> {
+                        instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                         ex.printStackTrace();
                         return null;
                     });
@@ -487,6 +475,7 @@ public class PaperClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
@@ -507,12 +496,12 @@ public class PaperClaimEvents implements Listener {
             cPlayer.setClaimAuto("");
         } else {
         	String playerName = player.getName();
-        	
-            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaim(player)) {
+
+            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaimInChunk(chunk)) {
                 player.sendMessage(instance.getLanguage().getMessage("worldguard-cannot-claim-in-region"));
                 return;
             }
-        	
+
         	// Check if the chunk is already claimed
             if (instance.getMain().checkIfClaimExists(chunk)) {
             	instance.getMain().handleClaimConflict(player, chunk);
@@ -520,7 +509,7 @@ public class PaperClaimEvents implements Listener {
             }
             
             // Check if there is chunk near
-            if(!instance.getMain().isAreaClaimFree(chunk, cPlayer.getClaimDistance(), playerName).join()) {
+            if(!instance.getMain().isAreaClaimFreeSync(chunk, cPlayer.getClaimDistance(), playerName)) {
             	player.sendMessage(instance.getLanguage().getMessage("cannot-claim-because-claim-near"));
             	return;
             }
@@ -557,6 +546,7 @@ public class PaperClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });

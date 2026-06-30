@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import fr.xyness.SCS.*;
@@ -22,9 +21,6 @@ import fr.xyness.SCS.Types.GuiSlot;
 public class ClaimsGui implements InventoryHolder {
 	
 	
-    // ***************
-    // *  Variables  *
-    // ***************
 
 	
     /** The inventory for this GUI. */
@@ -37,9 +33,6 @@ public class ClaimsGui implements InventoryHolder {
     private final SimpleClaimSystem instance;
     
     
-    // ******************
-    // *  Constructors  *
-    // ******************
 
     
     /**
@@ -71,15 +64,13 @@ public class ClaimsGui implements InventoryHolder {
         	}
         })
         .exceptionally(ex -> {
+            instance.getLogger().severe("Async GUI operation failed: " + ex.getMessage());
             ex.printStackTrace();
             return null;
         });
     }
     
     
-    // ********************
-    // *  Others Methods  *
-    // ********************
 
     
     /**
@@ -215,17 +206,11 @@ public class ClaimsGui implements InventoryHolder {
 	        	if(item == null) {
 	        		item = new ItemStack(Material.PLAYER_HEAD);
 	        	}
-	        	if(item.hasItemMeta() && item.getItemMeta() != null) {
-	        		if(item.getItemMeta() instanceof SkullMeta meta) {
-	    	            meta.setDisplayName(instance.getLanguage().getMessage("owner-claim-title").replace("%owner%", owner));
-	    	            meta.setLore(lore);
-	    	            item.setItemMeta(meta);
-	        		} else {
-	        			ItemMeta meta = item.getItemMeta();
-	    	            meta.setDisplayName(instance.getLanguage().getMessage("owner-claim-title").replace("%owner%", owner));
-	    	            meta.setLore(lore);
-	    	            item.setItemMeta(meta);
-	        		}
+	        	SkullMeta meta = (SkullMeta) item.getItemMeta();
+	        	if(meta != null) {
+	        		meta.setDisplayName(instance.getLanguage().getMessage("owner-claim-title").replace("%owner%", owner));
+	        		meta.setLore(lore);
+	        		item.setItemMeta(meta);
 	        	}
 	            inv.setItem(i, item);
 	            

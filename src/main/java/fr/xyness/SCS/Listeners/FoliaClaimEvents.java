@@ -18,8 +18,6 @@ import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
-import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
-
 import fr.xyness.SCS.SimpleClaimSystem;
 import fr.xyness.SCS.Types.CPlayer;
 import fr.xyness.SCS.Types.Claim;
@@ -29,21 +27,9 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public class FoliaClaimEvents implements Listener {
-
-	
-    // ***************
-    // *  Variables  *
-    // ***************
-	
 	
     /** Instance of SimpleClaimSystem */
     private SimpleClaimSystem instance;
-    
-    
-    // ******************
-    // *  Constructors  *
-    // ******************
-    
     
     /**
      * Constructor for ClaimEventsEnterLeave.
@@ -53,12 +39,6 @@ public class FoliaClaimEvents implements Listener {
     public FoliaClaimEvents(SimpleClaimSystem instance) {
     	this.instance = instance;
     }
-    
-    
-    // *******************
-    // *  EventHandlers  *
-    // *******************
-    
     
     /**
      * Handles the player post respawn event.
@@ -70,37 +50,35 @@ public class FoliaClaimEvents implements Listener {
     	if(instance.isFolia()) {
         	Player player = event.getPlayer();
             
-        	Bukkit.getRegionScheduler().run(instance, event.getRespawnLocation(), task -> {
-                Chunk to = event.getRespawnLocation().getChunk();
-                
-                instance.executeSync(() -> {
-                    String ownerTO = instance.getMain().getOwnerInClaim(to);
-                    
-                    CPlayer cPlayer = instance.getPlayerMain().getCPlayer(player.getUniqueId());
-                    if(cPlayer == null) return;
-                    
-                    String world = player.getWorld().getName();
-                    
-                    handleWeatherSettings(player, to, null);
-                    instance.getBossBars().activeBossBar(player, to);
-                    handleAutoFly(player, cPlayer, to, ownerTO);
+        	event.getRespawnLocation().getWorld().getChunkAtAsync(event.getRespawnLocation())
+        		.thenAccept(to -> {
+                    instance.executeSync(() -> {
+                        String ownerTO = instance.getMain().getOwnerInClaim(to);
+                        
+                        CPlayer cPlayer = instance.getPlayerMain().getCPlayer(player.getUniqueId());
+                        if(cPlayer == null) return;
+                        
+                        String world = player.getWorld().getName();
+                        
+                        handleWeatherSettings(player, to, null);
+                        instance.getBossBars().activeBossBar(player, to);
+                        handleAutoFly(player, cPlayer, to, ownerTO);
 
-                    if (cPlayer.getClaimAuto().equals("addchunk")) {
-                        handleAutoAddChunk(player, cPlayer, to, world);
-                    } else if (cPlayer.getClaimAuto().equals("delchunk")) {
-                        handleAutoDelChunk(player, cPlayer, to, world);
-                    } else if (cPlayer.getClaimAuto().equals("claim")) {
-                        handleAutoClaim(player, cPlayer, to, world);
-                    } else if (cPlayer.getClaimAuto().equals("unclaim")) {
-                        handleAutoUnclaim(player, cPlayer, to, world);
-                    }
+                        if (cPlayer.getClaimAuto().equals("addchunk")) {
+                            handleAutoAddChunk(player, cPlayer, to, world);
+                        } else if (cPlayer.getClaimAuto().equals("delchunk")) {
+                            handleAutoDelChunk(player, cPlayer, to, world);
+                        } else if (cPlayer.getClaimAuto().equals("claim")) {
+                            handleAutoClaim(player, cPlayer, to, world);
+                        } else if (cPlayer.getClaimAuto().equals("unclaim")) {
+                            handleAutoUnclaim(player, cPlayer, to, world);
+                        }
 
-                    if (cPlayer.getClaimAutomap()) {
-                        handleAutoMap(player, cPlayer, to, world);
-                    }
-                });
-
-        	});
+                        if (cPlayer.getClaimAutomap()) {
+                            handleAutoMap(player, cPlayer, to, world);
+                        }
+                    });
+        		});
 
     	}
     }
@@ -111,11 +89,15 @@ public class FoliaClaimEvents implements Listener {
 		Bukkit.getAsyncScheduler().runAtFixedRate(instance, task -> {
 			if(player != null && player.isOnline()) {
 				if(!player.isDead()) {
-					instance.executeSync(() -> {
-                        Location currentLocation = player.getLocation();
-                        PlayerRespawnEvent e = new PlayerRespawnEvent(player, currentLocation, false);
-			    		Bukkit.getPluginManager().callEvent(e);
-					});
+					player.getScheduler().execute(instance, () -> {
+                        Chunk to = player.getLocation().getChunk();
+                        String ownerTO = instance.getMain().getOwnerInClaim(to);
+                        CPlayer cPlayer = instance.getPlayerMain().getCPlayer(player.getUniqueId());
+                        if(cPlayer == null) { task.cancel(); return; }
+                        handleWeatherSettings(player, to, null);
+                        instance.getBossBars().activeBossBar(player, to);
+                        handleAutoFly(player, cPlayer, to, ownerTO);
+					}, null, 0);
 					task.cancel();
 				}
 			} else {
@@ -185,13 +167,18 @@ public class FoliaClaimEvents implements Listener {
     			Chunk from = event.getFrom().getChunk();
     			Bukkit.getGlobalRegionScheduler().run(instance, maintask -> {
     				Player player = event.getPlayer();
+                    if(!player.isOnline() || player.hasMetadata("NPC")) return;
+                    UUID playerId = player.getUniqueId();
+                    CPlayer cPlayer = instance.getPlayerMain().getCPlayer(playerId);
+
                     if (!instance.getMain().checkIfClaimExists(to)) {
                     	instance.getBossBars().disableBossBar(player);
+                    	if (cPlayer != null) {
+                    		instance.getPlayerMain().removePlayerFly(player);
+                    	}
                     	return;
                     }
 
-                    UUID playerId = player.getUniqueId();
-                    CPlayer cPlayer = instance.getPlayerMain().getCPlayer(playerId);
                     if(cPlayer == null) return;
                     
                     String ownerTO = instance.getMain().getOwnerInClaim(to);
@@ -245,9 +232,6 @@ public class FoliaClaimEvents implements Listener {
     }
     
     
-    // *******************
-    // *  Other methods  *
-    // *******************
     
     
     /**
@@ -290,11 +274,11 @@ public class FoliaClaimEvents implements Listener {
      * @param chunk  The chunk.
      */
     private void handleWeatherSettings(Player player, Chunk to, Chunk from) {
-    	Claim claimTo = instance.getMain().getClaim(to);
-    	Claim claimFrom = instance.getMain().getClaim(from);
-        if (instance.getMain().checkIfClaimExists(to) && !claimTo.getPermissionForPlayer("Weather",player)) {
+    	Claim claimTo = to == null ? null : instance.getMain().getClaim(to);
+    	Claim claimFrom = from == null ? null : instance.getMain().getClaim(from);
+        if (claimTo != null && !claimTo.getPermissionForPlayer("Weather",player)) {
             player.setPlayerWeather(WeatherType.CLEAR);
-        } else if (instance.getMain().checkIfClaimExists(from) && !claimFrom.getPermissionForPlayer("Weather",player)) {
+        } else if (claimFrom != null && !claimFrom.getPermissionForPlayer("Weather",player)) {
             player.resetPlayerWeather();
         }
     }
@@ -361,6 +345,7 @@ public class FoliaClaimEvents implements Listener {
 	        		}
 	        	})
 	            .exceptionally(ex -> {
+	                instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
 	                ex.printStackTrace();
 	                return null;
 	            });
@@ -381,11 +366,11 @@ public class FoliaClaimEvents implements Listener {
             cPlayer.setClaimAuto("");
         } else {
         	
-            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaim(player)) {
+            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaimInChunk(chunk)) {
                 player.sendMessage(instance.getLanguage().getMessage("worldguard-cannot-claim-in-region"));
                 return;
             }
-        	
+
         	String playerName = player.getName();
         	Claim claim = cPlayer.getTargetClaimChunk();
         	if(claim == null) return;
@@ -455,6 +440,7 @@ public class FoliaClaimEvents implements Listener {
                         		}
                         	})
                             .exceptionally(ex -> {
+                                instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                                 ex.printStackTrace();
                                 return null;
                             });
@@ -464,6 +450,7 @@ public class FoliaClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
@@ -502,6 +489,7 @@ public class FoliaClaimEvents implements Listener {
             			}
             		})
                     .exceptionally(ex -> {
+                        instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                         ex.printStackTrace();
                         return null;
                     });
@@ -522,6 +510,7 @@ public class FoliaClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
@@ -542,11 +531,11 @@ public class FoliaClaimEvents implements Listener {
             cPlayer.setClaimAuto("");
         } else {
         	
-            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaim(player)) {
+            if (instance.getSettings().getBooleanSetting("worldguard") && !instance.getWorldGuard().checkFlagClaimInChunk(chunk)) {
                 player.sendMessage(instance.getLanguage().getMessage("worldguard-cannot-claim-in-region"));
                 return;
             }
-        	
+
         	String playerName = player.getName();
         	// Check if the chunk is already claimed
             if (instance.getMain().checkIfClaimExists(chunk)) {
@@ -555,7 +544,7 @@ public class FoliaClaimEvents implements Listener {
             }
             
             // Check if there is chunk near
-            if(!instance.getMain().isAreaClaimFree(chunk, cPlayer.getClaimDistance(), playerName).join()) {
+            if(!instance.getMain().isAreaClaimFreeSync(chunk, cPlayer.getClaimDistance(), playerName)) {
             	player.sendMessage(instance.getLanguage().getMessage("cannot-claim-because-claim-near"));
             	return;
             }
@@ -592,6 +581,7 @@ public class FoliaClaimEvents implements Listener {
             		}
             	})
                 .exceptionally(ex -> {
+                    instance.getLogger().severe("Async claim event operation failed: " + ex.getMessage());
                     ex.printStackTrace();
                     return null;
                 });
