@@ -62,7 +62,7 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.shadowJar {
-    archiveFileName.set("SimpleClaimSystem-${project.version}.jar")
+    archiveFileName.set("CUSTOM_SimpleClaimSystem-${project.version}.jar")
     relocate("com.zaxxer.hikari", "fr.xyness.libs.hikari")
 
     minimize()
@@ -87,11 +87,5 @@ publishing {
                 password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
             }
         }
-    }
-}
-
-ktor {
-    fatJar {
-        archiveFileName.set("CUSTOM_SimpleClaimSystem.jar")
     }
 }
