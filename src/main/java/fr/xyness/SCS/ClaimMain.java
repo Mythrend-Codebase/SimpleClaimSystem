@@ -4488,7 +4488,7 @@ public class ClaimMain {
 	                        return;
 	                    }
 	                    World world = player.getWorld();
-	                    particleLocations.forEach(location -> world.spawnParticle(Particle.REDSTONE, location, 1, 0, 0, 0, 0, dustOptions));
+	                    particleLocations.forEach(location -> player.spawnParticle(Particle.REDSTONE, location, 1, 0, 0, 0, 0, dustOptions));
 	                    counter++;
 	                }
 	            }.runTaskTimerAsynchronously(instance, 0, 10L);
